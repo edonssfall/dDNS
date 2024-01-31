@@ -1,50 +1,58 @@
-import json
-
 from dotenv import load_dotenv
+from logger import Logger
 import requests
-import os
+import datetime
+import logging
+import json
 
 load_dotenv()
 
-domain_name = os.environ["DOMAIN_NAME"]
-record_type = os.environ["RECORD_TYPE"]
-record_name = os.environ["RECORD_NAME"]
 
-url = (
-    "https://api.godaddy.com/v1/domains/{}/records/{}/{}"
-    .format(os.environ["DOMAIN_NAME"], os.environ["RECORD_TYPE"], os.environ["RECORD_NAME"])
-)
+class ApiGoDaddy:
+    domains_url = "https://api.godaddy.com/v1/domains/{}/records/{}/{}"
 
-headers = {
-    "Authorization": "sso-key {}:{}"
-    .format(os.environ['APIKey'], os.environ['APISecret']),
-}
+    def __init__(self, api_key: str, api_secret: str, logger=Logger("ApiGoDaddy")):
+        self.logger = logger
+        self.headers = {
+            "Authorization": "sso-key {}:{}"
+            .format(api_key, api_secret),
+        }
 
+    def get_host_ip(self, domain_name: str, record_type: str, record_name: str) -> dict | None:
+        response = requests.get(
+            url=self.domains_url.format(domain_name, record_type, record_name),
+            headers=self.headers
+        )
 
-def get_ip():
-    response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            response_json = response.json()[0]
 
-    if response.status_code == 200:
-        print("GET Succeed")
-        return response.json()[0]['data']
+            print(f"[{datetime.datetime.now().isoformat()}] - GET Host IP Succeed.")
+            self.logger.log(logging.INFO, f"GET Host Ip - {response_json}")
+            return response_json["data"]
 
-    else:
-        print("GET Fail.")
-        print(response.status_code, response.text)
+        else:
+            print(f"[{datetime.datetime.now().isoformat()}] - GET Host IP FAIL!!!")
+            print("\t", response.status_code, response.text)
+            self.logger.log(logging.ERROR, f"GET Host Ip - {response.status_code}, {response.text}")
 
+    def set_host_ip(self, new_ip: str, domain_name: str, record_type: str, record_name: str):
+        new_ip = "192.168.1.124"
 
-def set_ip(current_ip: str):
-    # data = [{"data": current_ip}]
-    data = [{"data": "192.168.1.124"}]
+        headers = self.headers.copy()
+        headers["Content-Type"] = "application/json"
 
-    headers["Content-Type"] = "application/json"
+        response = requests.put(
+            url=self.domains_url.format(domain_name, record_type, record_name),
+            headers=headers,
+            data=json.dumps([{
+                "data": new_ip
+            }])
+        )
 
-    response = requests.put(url, headers=headers, data=json.dumps(data))
+        if response.status_code == 200:
+            print("PUT Succeed")
 
-    if response.status_code == 200:
-        print("PUT Succeed")
-        print(response.json())
-
-    else:
-        print("PUT Fail.")
-        print(response.status_code, response.text)
+        else:
+            print("PUT Fail.")
+            print(response.status_code, response.text)
