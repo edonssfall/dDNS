@@ -32,8 +32,8 @@ class ApiGoDaddy:
             return response_json["data"]
 
         else:
-            print(f"[{datetime.datetime.now().isoformat()}] - GET Host IP FAIL!!!")
-            print("\t", response.status_code, response.text)
+            print(f"[{datetime.datetime.now().isoformat()}] - GET Host IP FAIL!!!\n"
+                  f"\t", response.status_code, response.text)
             self.logger.log(logging.ERROR, f"GET Host Ip - {response.status_code}, {response.text}")
 
     def set_host_ip(self, new_ip: str, domain_name: str, record_type: str, record_name: str):
